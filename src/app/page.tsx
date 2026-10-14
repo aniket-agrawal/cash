@@ -217,11 +217,12 @@ export default function Home() {
             <div className={paneHead}>collaborative space <span className="text-zinc-600 normal-case tracking-normal">· everyone sees this</span></div>
             <div ref={streamRef} className="flex-1 min-h-0 overflow-auto p-3 space-y-2">
               {data.messages.map((m) => {
-                const agent = m.kind === "agent"; const sys = m.kind === "system" || m.kind === "context"; const cmd = m.kind === "command";
+                const agent = m.kind === "agent"; const working = m.kind === "working"; const sys = m.kind === "system" || m.kind === "context"; const cmd = m.kind === "command";
+                const cls = working ? "bg-indigo-500/5 border border-indigo-400/40 animate-pulse" : agent ? "bg-indigo-500/10 border border-indigo-500/20" : sys ? "bg-amber-400/10 border border-amber-400/20" : "bg-[#1b1b20] border-l-2";
                 return (
-                  <div key={m.id} className={`rounded-lg px-3 py-2 ${agent ? "bg-indigo-500/10 border border-indigo-500/20" : sys ? "bg-transparent border border-zinc-800" : "bg-[#1b1b20]"}`}>
-                    <div className="text-[11px] mb-0.5 flex gap-2"><span style={{ color: agent ? "#a5b4fc" : colorFor(m.author) }}>{m.author}</span><span className="text-zinc-600">{ago(m.created_at)} ago</span></div>
-                    <Clamp text={m.body} mono={cmd} />
+                  <div key={m.id} className={`rounded-lg px-3 py-2 ${cls}`} style={!agent && !working && !sys ? { borderLeftColor: colorFor(m.author) } : undefined}>
+                    <div className="text-[11px] mb-0.5 flex gap-2"><span style={{ color: agent || working ? "#a5b4fc" : sys ? "#fcd34d" : colorFor(m.author) }}>{working ? "task agent · working" : m.author}</span><span className="text-zinc-600">{ago(m.created_at)} ago</span></div>
+                    <Clamp text={working ? `⏳ ${m.body}` : m.body} mono={cmd} />
                   </div>
                 );
               })}
@@ -250,8 +251,8 @@ export default function Home() {
             <div ref={privRef} className="flex-1 min-h-0 overflow-auto px-3 pb-2 space-y-2">
               {priv?.messages.length === 0 && <div className="text-zinc-500 text-sm p-1">Your assistant reads the room for you, briefs you here, and can steer the task on your behalf once you approve. Ask it anything.</div>}
               {priv?.messages.map((m) => (
-                <div key={m.id} className={`rounded-lg px-3 py-2 ${m.author === "assistant" ? "bg-[#1f1f26]" : "bg-[#1b1b20] border border-zinc-800"}`}>
-                  <div className="text-[11px] mb-0.5 text-zinc-500">{m.author === "assistant" ? "assistant" : "you"} · {ago(m.created_at)} ago</div>
+                <div key={m.id} className={`rounded-lg px-3 py-2 ${m.author === "assistant" ? "bg-indigo-500/10 border border-indigo-500/20" : "bg-[#1b1b20] border-l-2"}`} style={m.author === "assistant" ? undefined : { borderLeftColor: colorFor(user) }}>
+                  <div className="text-[11px] mb-0.5"><span style={{ color: m.author === "assistant" ? "#a5b4fc" : colorFor(user) }}>{m.author === "assistant" ? "assistant" : "you"}</span><span className="text-zinc-600"> · {ago(m.created_at)} ago</span></div>
                   <Clamp text={m.body} />
                 </div>
               ))}

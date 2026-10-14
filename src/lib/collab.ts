@@ -54,8 +54,19 @@ export async function createTask(roomId: string, title: string, type: TaskType, 
   return id;
 }
 export async function postMessage(taskId: string, author: string, kind: string, body: string) {
-  await q("insert into messages (task_id, author, kind, body) values ($1,$2,$3,$4)", [taskId, author, kind, body.slice(0, 8000)]);
+  const [row] = await q<{ id: number }>("insert into messages (task_id, author, kind, body) values ($1,$2,$3,$4) returning id", [taskId, author, kind, body.slice(0, 8000)]);
   await q("update tasks set updated_at = now() where id = $1", [taskId]);
+  return Number(row.id);
+}
+export async function presentUsers(taskId: string): Promise<string[]> {
+  const rows = await q<{ k: string }>("select k from kv where k like $1 and (v::text)::bigint > $2", [`presence:${taskId}:%`, Date.now() - 10 * 60_000]);
+  return rows.map((r) => r.k.split(":").pop()!).filter(Boolean);
+}
+// After someone steers, every other person present gets briefed by their own assistant right away.
+export async function notifyAssistants(taskId: string, except: string) {
+  const users = (await presentUsers(taskId)).filter((u) => u !== clean(except));
+  await Promise.allSettled(users.map((u) => assistantTick(taskId, u)));
+  return users;
 }
 export async function getTask(taskId: string) {
   const [task] = await q<Task>("select * from tasks where id = $1", [taskId]);
@@ -70,6 +81,7 @@ export async function getTask(taskId: string) {
 }
 export async function getPrivate(taskId: string, username: string) {
   const u = clean(username);
+  await kvSet(`presence:${taskId}:${u}`, Date.now());
   const [messages, proposals] = await Promise.all([
     q<PrivateMessage>("select * from private_messages where task_id = $1 and username = $2 order by id desc limit 40", [taskId, u]),
     q<Proposal>("select * from proposals where task_id = $1 and assistant_of = $2 and status = 'pending' order by id desc", [taskId, u]),
@@ -90,11 +102,12 @@ function contextBlock(task: Task, messages: Message[], artifact: Artifact | null
 }
 
 // The task agent: builds the artifact for everyone, reports in one line. The work speaks for itself.
-export async function generateArtifact(taskId: string, instruction: string, by: string) {
+export async function generateArtifact(taskId: string, instruction: string, by: string, workingId?: number) {
   const data = await getTask(taskId);
   if (!data) throw new Error("no such task");
   const { task, messages, artifact } = data;
   await kvSet(`lock:task-agent:${taskId}`, Date.now());
+  const wid = workingId ?? (await postMessage(taskId, TASK_AGENT, "working", `working on it · ${by === TASK_AGENT ? "applying the latest steering" : `instruction from ${by}`}`));
   try {
     const r = await llm(`${TYPE_PROMPT[task.type] ?? TYPE_PROMPT.doc}\n\nSTEERING (${by}): ${instruction}\n\n${contextBlock(task, messages, artifact)}`, "smart",
       "You are the task agent inside CASH, a collaborative agents shell. Several people steer you through the shared conversation; some messages carry context from their private assistants. Apply the latest steering, keep what was good, and output only the artifact.");
@@ -103,9 +116,13 @@ export async function generateArtifact(taskId: string, instruction: string, by: 
     const version = (artifact?.version ?? 0) + 1;
     await q("insert into artifacts (task_id, type, title, content, version, created_by) values ($1,$2,$3,$4,$5,$6)", [taskId, task.type, task.title, content, version, by]);
     const summary = await llm(`One short sentence (max 18 words) saying what changed in this ${task.type} artifact. Plain text, no preamble.\n\nSTEERING: ${instruction.slice(0, 800)}\n\nARTIFACT:\n${content.slice(0, 3000)}`, "cheap").catch(() => ({ text: `updated the ${task.type}` } as { text: string }));
-    await postMessage(taskId, TASK_AGENT, "agent", `v${version} · ${summary.text.trim()}`);
+    await q("update messages set kind = 'agent', body = $2, created_at = now() where id = $1", [wid, `v${version} · ${summary.text.trim()}`]);
+    await q("update tasks set updated_at = now() where id = $1", [taskId]);
     if (task.status === "open") await q("update tasks set status = 'in_progress' where id = $1", [taskId]);
     return { version, model: r.model };
+  } catch (e) {
+    await q("update messages set kind = 'system', body = $2 where id = $1", [wid, `task agent failed: ${e instanceof Error ? e.message.slice(0, 200) : String(e)}`]);
+    throw e;
   } finally { await kvSet(`lock:task-agent:${taskId}`, 0); }
 }
 
@@ -119,7 +136,9 @@ export async function taskAgentTick(taskId: string) {
   await kvSet(curKey, Number(all[0]?.id ?? cursor));
   if (!fresh.length) return { idle: true };
   const steering = fresh.map((m) => `- [${m.author}] ${m.body.slice(0, 700)}`).join("\n");
-  const r = await generateArtifact(taskId, `The room steered you with these new messages; apply them:\n${steering}`, TASK_AGENT);
+  const who = [...new Set(fresh.map((m) => m.author))].join(", ");
+  const wid = await postMessage(taskId, TASK_AGENT, "working", `working on it · applying steering from ${who}`);
+  const r = await generateArtifact(taskId, `The room steered you with these new messages; apply them:\n${steering}`, TASK_AGENT, wid);
   return { idle: false, ...r };
 }
 
@@ -189,6 +208,7 @@ export async function resolveProposal(id: number, username: string, decision: "a
   let note = "";
   if (p.action === "post_message") { await postMessage(p.task_id, u, "message", String(p.args.message ?? "")); note = `Posted to the room as you: "${String(p.args.message ?? "").slice(0, 160)}". The task agent will pick it up.`; }
   else if (p.action === "update_artifact") { await generateArtifact(p.task_id, String(p.args.instruction ?? "improve the artifact"), `${u} (via assistant)`); note = "Done: the task agent applied the change; see the workspace."; }
+  else if (p.action === "post_message") { /* handled above */ }
   else if (p.action === "set_status") { const s = String(p.args.status ?? "in_progress"); await q("update tasks set status = $2, updated_at = now() where id = $1", [p.task_id, s]); await postMessage(p.task_id, "system", "system", `${u} marked this task ${s}.`); note = `Status set to ${s}.`; }
   else if (p.action === "run_shell") { await runShellTask(p.task_id, u); note = "Ran the pipeline; results are in the room."; }
   await q("update proposals set status = 'done' where id = $1", [id]);
@@ -197,16 +217,17 @@ export async function resolveProposal(id: number, username: string, decision: "a
 }
 
 const ASSISTANT_SYSTEM = "You are a person's private assistant inside CASH, a collaborative agents shell. Only your person sees you. Be brief and summary-first (max 70 words). You never act on the shared task without approval: you propose, they approve. You may propose to post a message to the shared room on their behalf (written in first person as them, carrying the gist of your private discussion so the task agent has full context), to change the artifact directly, or to change status.";
-const PROPOSAL_SHAPE = `"proposal": null | {"action":"post_message","message":"<first-person message as the user for the shared room, <= 60 words>","rationale":"<why>"} | {"action":"update_artifact","instruction":"<specific change>","rationale":"<why>"} | {"action":"set_status","status":"completed"|"in_progress","rationale":"<why>"}`;
+const PROPOSAL_SHAPE = `"proposal": null | {"action":"post_message","message":"<first-person message as the user for the shared room, <= 60 words, carrying the gist of the private discussion>","rationale":"<why>"} | {"action":"set_status","status":"completed"|"in_progress","rationale":"<why>"}`;
 
 async function privateHistory(taskId: string, u: string) {
   const rows = await q<PrivateMessage>("select * from private_messages where task_id = $1 and username = $2 order by id desc limit 12", [taskId, u]);
   return rows.reverse().map((m) => `[${m.author === "assistant" ? "assistant" : u}] ${m.body.slice(0, 400)}`).join("\n");
 }
-async function fileProposal(taskId: string, u: string, pr: { action?: string; message?: string; instruction?: string; status?: string; rationale?: string } | null | undefined) {
+async function fileProposal(taskId: string, u: string, pr: { action?: string; message?: string; instruction?: string; status?: string; rationale?: string } | null | undefined, supersede = false) {
   if (!pr?.action) return null;
   const [pending] = await q<{ id: number }>("select id from proposals where task_id = $1 and assistant_of = $2 and status = 'pending' limit 1", [taskId, u]);
-  if (pending) return null;
+  if (pending && !supersede) return null;
+  if (pending) await q("update proposals set status = 'superseded', resolved_at = now() where id = $1", [pending.id]);
   const args = pr.action === "post_message" ? { message: pr.message ?? "" } : pr.action === "update_artifact" ? { instruction: pr.instruction ?? "" } : pr.action === "set_status" ? { status: pr.status ?? "in_progress" } : {};
   const [row] = await q<{ id: number }>("insert into proposals (task_id, assistant_of, action, args, rationale) values ($1,$2,$3,$4::jsonb,$5) returning id", [taskId, u, pr.action, JSON.stringify(args), pr.rationale ?? null]);
   return Number(row.id);
@@ -218,9 +239,9 @@ export async function talkToAssistant(taskId: string, username: string, text: st
   const data = await getTask(taskId);
   if (!data) throw new Error("no such task");
   await q("insert into private_messages (task_id, username, author, body) values ($1,$2,$3,$4)", [taskId, u, u, text.slice(0, 2000)]);
-  const r = await llm(`${contextBlock(data.task, data.messages, data.artifact)}\n\nPRIVATE CONVERSATION WITH ${u} (oldest first):\n${await privateHistory(taskId, u)}\n\n${u} just said: ${text}\n\nReturn ONLY JSON: {"reply":"<your brief reply, summary-first>", ${PROPOSAL_SHAPE}}. Propose only when it clearly helps; if ${u} wants the shared work changed, propose post_message so the room and the task agent see it as coming from ${u}.`, "smart", ASSISTANT_SYSTEM);
+  const r = await llm(`${contextBlock(data.task, data.messages, data.artifact)}\n\nPRIVATE CONVERSATION WITH ${u} (oldest first):\n${await privateHistory(taskId, u)}\n\n${u} just said: ${text}\n\nReturn ONLY JSON: {"reply":"<your brief reply, summary-first>", ${PROPOSAL_SHAPE}}. If ${u} wants the shared work changed, or asks you to steer, tell or ask the room, you MUST propose post_message (written as ${u}, in first person) so the room and the task agent see it as coming from ${u}. Only answer without a proposal for pure questions.`, "smart", ASSISTANT_SYSTEM);
   const parsed = parseJson<{ reply?: string; proposal?: Parameters<typeof fileProposal>[2] }>(r.text, { reply: r.text.slice(0, 400), proposal: null });
-  const pid = await fileProposal(taskId, u, parsed.proposal);
+  const pid = await fileProposal(taskId, u, parsed.proposal, true);
   await q("insert into private_messages (task_id, username, author, body) values ($1,$2,'assistant',$3)", [taskId, u, (parsed.reply ?? "").trim() + (pid ? `\n\nProposal #${pid}: ${parsed.proposal?.action}${parsed.proposal?.message ? ` — "${parsed.proposal.message}"` : parsed.proposal?.instruction ? ` — ${parsed.proposal.instruction}` : parsed.proposal?.status ? ` — ${parsed.proposal.status}` : ""}. Approve and I'll do it.` : "")]);
   return { model: r.model, proposal: pid };
 }
