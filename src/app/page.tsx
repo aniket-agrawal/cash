@@ -19,7 +19,7 @@ export default function Home() {
   const [state, setState] = useState<State | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [cmd, setCmd] = useState("");
-  const [console_, setConsole] = useState<string[]>(["agentsh 0.1 — type `help`"]);
+  const [console_, setConsole] = useState<string[]>(["cash 0.1 — type `help`"]);
   const [filterPid, setFilterPid] = useState<string | null>(null);
   const [open, setOpen] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -33,6 +33,8 @@ export default function Home() {
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
   }, []);
   useEffect(() => { refresh(); const t = setInterval(refresh, 3000); return () => clearInterval(t); }, [refresh]);
+  // Heartbeat: while a dashboard is open it pokes the scheduler once a minute (server-side rate-limited).
+  useEffect(() => { const poke = () => fetch("/api/poke", { method: "POST" }).then(refresh).catch(() => {}); poke(); const t = setInterval(poke, 60_000); return () => clearInterval(t); }, [refresh]);
 
   const print = (s: string) => setConsole((c) => [...c.slice(-40), s]);
   const post = async (url: string, body: unknown) => {
@@ -71,11 +73,11 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-black text-zinc-200 font-mono text-[13px] leading-relaxed">
       <header className="border-b border-zinc-800 px-5 py-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <h1 className="text-emerald-400 text-base font-semibold">agentsh</h1>
-        <span className="flex items-center gap-1 text-zinc-500">by the <img src="/xyne.svg" alt="Xyne" className="h-4 inline-block opacity-80" /> Xyne team @ Juspay</span>
-        <span className="text-zinc-400">a unix shell for agents that keep working</span>
-        <span className="ml-auto text-zinc-500">small commands · text streams · pipes · cron · tail -f · kill · steer</span>
-        <a className="text-zinc-500 underline decoration-zinc-700 hover:text-zinc-300" href="https://github.com/juspay/xyne-spaces" target="_blank" rel="noreferrer">philosophy: Xyne, the open-source org OS</a>
+        <h1 className="text-emerald-400 text-base font-semibold">CASH</h1>
+        <span className="flex items-center gap-1 text-zinc-500"><img src="/xyne.svg" alt="Xyne" className="h-4 inline-block opacity-90" /> presents CASH</span>
+        <span className="text-zinc-400">Collaborative Agent Shell — unix pipes for agents that keep working</span>
+        <span className="ml-auto text-zinc-500">small commands · text streams · pipes · cron + heartbeat · tail -f · kill · steer</span>
+        <a className="text-zinc-500 underline decoration-zinc-700 hover:text-zinc-300" href="https://github.com/juspay/xyne-spaces" target="_blank" rel="noreferrer">Xyne, the open-source org OS</a>
       </header>
       {err && <div className="px-5 py-2 text-red-400 border-b border-red-900/40">state: {err} — is DATABASE_URL set and /api/setup run?</div>}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(0,0.9fr)] gap-0 divide-y lg:divide-y-0 lg:divide-x divide-zinc-800">

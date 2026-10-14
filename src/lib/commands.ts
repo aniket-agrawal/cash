@@ -7,7 +7,7 @@ export interface Ctx { pipelineId: string; runId: number; stepIndex: number; not
 export interface StepResult { out: string; model?: string; ms?: number; tokens?: number }
 export interface Command { name: string; help: string; run: (input: string, args: string, ctx: Ctx) => Promise<StepResult> }
 
-const UA = "agentsh/0.1 (unix pipes for agents; https://github.com/aniket-agrawal/agentsh)";
+const UA = "CASH/0.1 (Collaborative Agent Shell; https://github.com/aniket-agrawal/cash)";
 
 function notesBlock(ctx: Ctx) {
   return ctx.notes.length ? `\n\nOPERATOR NOTES (a human steering this agent wrote these; follow them):\n${ctx.notes.map((n) => `- ${n}`).join("\n")}` : "";

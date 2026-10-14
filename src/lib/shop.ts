@@ -25,7 +25,7 @@ export async function shopSearch(query: string, maxUsd?: number, limit = 8): Pro
       },
       _meta: {
         "io.modelcontextprotocol/protocolVersion": "2026-07-28",
-        "io.modelcontextprotocol/clientInfo": { name: "agentsh", version: "0.1.0" },
+        "io.modelcontextprotocol/clientInfo": { name: "xyne-cash", version: "0.1.0" },
         "io.modelcontextprotocol/clientCapabilities": {},
       },
     },

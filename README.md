@@ -1,6 +1,8 @@
-# agentsh — a unix shell for agents that keep working
+# CASH — Collaborative Agent Shell
 
-> Unix solved sprawl in 1973: small programs that do one thing, speak plain text, compose with pipes, run from cron, and can be watched and killed by an operator. agentsh applies that to AI agents.
+**Xyne presents CASH:** unix pipes for agents that keep working, operated together by your team.
+
+> Unix solved sprawl in 1973: small programs that do one thing, speak plain text, compose with pipes, run from cron, and can be watched and killed by an operator. CASH applies that to AI agents, in a shell your whole team shares.
 
 Every agent is a tiny command. You compose them with `|`, schedule them, and operate them like processes:
 
@@ -25,7 +27,7 @@ Next.js on Vercel · AI SDK + Vercel AI Gateway (meta/llama-4-maverick for filte
 
 ## Philosophy
 
-This is how [Xyne](https://github.com/juspay/xyne-spaces), Juspay's open-source org OS, thinks about agents: an organization is a filesystem of context that agents `ls`, `grep` and `tail` as the person who invoked them, permission-aware by default, with small sandboxed tools instead of one monolith. agentsh is that idea reduced to a shell you can run on Vercel in an afternoon.
+This is how [Xyne](https://github.com/juspay/xyne-spaces), Juspay's open-source org OS, thinks about agents: an organization is a filesystem of context that agents `ls`, `grep` and `tail` as the person who invoked them, permission-aware by default, with small sandboxed tools instead of one monolith. CASH is that idea reduced to a shell you can run on Vercel in an afternoon.
 
 ## Run it
 

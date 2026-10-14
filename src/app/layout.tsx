@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "agentsh — a unix shell for agents that keep working",
-  description: "Small single-purpose agent commands, composed with pipes, run from cron, operated with tail -f, kill and steer. Built on Vercel, AI Gateway and Neon by the Xyne team.",
+  title: "CASH — Collaborative Agent Shell, by Xyne",
+  description: "Xyne presents CASH: small agent commands, composed with pipes, run from cron, operated together with tail -f, steer and kill. Built on Vercel, AI Gateway and Neon.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -1,4 +1,4 @@
-name: agentsh ticker
+name: CASH ticker
 # Portable cron: pokes the deployed scheduler every 5 minutes so agents keep working on any Vercel plan.
 on:
   schedule:
