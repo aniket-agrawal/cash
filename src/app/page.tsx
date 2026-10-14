@@ -239,7 +239,7 @@ export default function Home() {
             </div>
           </section>
           {/* personal space */}
-          <section className={`${pane} bg-black`}>
+          <section className={`${pane} bg-[#1e293b]`}>
             <div className={paneHead}>your assistant <span className="text-zinc-600 normal-case tracking-normal">· only you see this</span></div>
             {lastBrief && <div className="m-3 rounded-lg border border-teal-400/40 bg-teal-500/15 p-3"><div className="text-[11px] text-teal-300 mb-1">latest brief · {ago(lastBrief.created_at)} ago</div><div className="text-[13px] text-zinc-100 leading-relaxed whitespace-pre-wrap">{lastBrief.body.split("\n\nProposal #")[0]}</div></div>}
             {priv?.proposals.map((p) => (
@@ -253,7 +253,7 @@ export default function Home() {
             <div ref={privRef} className="flex-1 min-h-0 overflow-auto px-3 pb-2 space-y-2">
               {priv?.messages.length === 0 && <div className="text-zinc-500 text-sm p-1">Your assistant reads the room for you, briefs you here, and can steer the task on your behalf once you approve. Ask it anything.</div>}
               {priv?.messages.map((m) => (
-                <div key={m.id} className={`rounded-lg px-3 py-2 ${m.author === "assistant" ? "bg-indigo-500/10 border border-indigo-500/20" : "bg-[#17171c] border-l-2"}`} style={m.author === "assistant" ? undefined : { borderLeftColor: colorFor(user) }}>
+                <div key={m.id} className={`rounded-lg px-3 py-2 ${m.author === "assistant" ? "bg-indigo-500/15 border border-indigo-400/30" : "bg-[#0f172a] border-l-2"}`} style={m.author === "assistant" ? undefined : { borderLeftColor: colorFor(user) }}>
                   <div className="text-[11px] mb-0.5"><span style={{ color: m.author === "assistant" ? "#a5b4fc" : colorFor(user) }}>{m.author === "assistant" ? "assistant" : "you"}</span><span className="text-zinc-600"> · {ago(m.created_at)} ago</span></div>
                   <Clamp text={m.body} />
                 </div>
