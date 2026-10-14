@@ -22,7 +22,7 @@ Next.js 16 on Vercel · AI SDK + Vercel AI Gateway (meta/llama-4-maverick for fi
 Open the deployed URL. No login. Press **run** on any agent or type `run agent-research` in the terminal; a run appears in `tail -f` within seconds. Try `steer keyboard-price-watch only show items under $100` then run it again. Try `pipe quest-watch every 10m shop "meta quest 3" | diff | brief`. Device requirements: none.
 
 ## Links
-- Live: <PRODUCTION_URL>
+- Live: https://xyne-cash.vercel.app
 - Repo: https://github.com/aniket-agrawal/CASH
 - Video: <YOUTUBE_URL>
 
