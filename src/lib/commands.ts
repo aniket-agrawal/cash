@@ -14,6 +14,24 @@ function notesBlock(ctx: Ctx) {
 }
 const SYSTEM = "You are one step in a Unix-style agent pipeline. Your input arrives on stdin. Do exactly one job. Output plain text only: no preamble, no markdown headers, no apologies. Preserve URLs exactly as given.";
 
+
+// If the model layer is unavailable (no Gateway billing, provider outage), degrade to a deterministic digest instead of failing the run.
+async function llmOrDigest(prompt: string, tier: "cheap" | "smart", input: string, mode: "filter" | "transform" | "brief"): Promise<StepResult> {
+  try {
+    const r = await llm(prompt, tier, SYSTEM);
+    return { out: r.text.trim(), model: r.model, ms: r.ms, tokens: r.inputTokens + r.outputTokens };
+  } catch (e) {
+    const why = e instanceof Error ? e.message.split("\n")[0].slice(0, 120) : String(e);
+    const lines = input.split("\n").filter((l) => l.trim());
+    const heads = lines.filter((l) => !/^\s/.test(l));
+    let out: string;
+    if (mode === "filter") out = heads.slice(0, 8).join("\n");
+    else if (mode === "brief") out = `Digest (${heads.length} items; model unavailable, deterministic fallback)\n` + heads.slice(0, 6).map((l) => l.replace(/^[-#]+\s*/, "• ")).join("\n");
+    else out = lines.slice(0, 20).join("\n");
+    return { out, model: `fallback:digest (${why})`, ms: 0, tokens: 0 };
+  }
+}
+
 export const COMMANDS: Record<string, Command> = {
   fetch: {
     name: "fetch", help: "fetch <url>  — GET a page, RSS or Atom feed; emits plain text",
@@ -110,25 +128,22 @@ export const COMMANDS: Record<string, Command> = {
     async run(input, args, ctx) {
       const [criterion] = positional(tokenize(args));
       if (!input.trim()) return { out: "" };
-      const r = await llm(`Keep only the input lines that match this criterion: ${criterion}\nReturn the matching lines verbatim, one per line, including their URLs. If none match, return exactly NONE.${notesBlock(ctx)}\n\n--- stdin ---\n${input}`, "cheap", SYSTEM);
-      const out = /^\s*NONE\s*$/.test(r.text) ? "" : r.text.trim();
-      return { out, model: r.model, ms: r.ms, tokens: r.inputTokens + r.outputTokens };
+      const r = await llmOrDigest(`Keep only the input lines that match this criterion: ${criterion}\nReturn the matching lines verbatim, one per line, including their URLs. If none match, return exactly NONE.${notesBlock(ctx)}\n\n--- stdin ---\n${input}`, "cheap", input, "filter");
+      return { ...r, out: /^\s*NONE\s*$/.test(r.out) ? "" : r.out };
     },
   },
   llm: {
     name: "llm", help: 'llm "<instruction>"  — LLM (smart tier) transforms stdin per instruction',
     async run(input, args, ctx) {
       const [instruction] = positional(tokenize(args));
-      const r = await llm(`${instruction}${notesBlock(ctx)}\n\n--- stdin ---\n${input}`, "smart", SYSTEM);
-      return { out: r.text.trim(), model: r.model, ms: r.ms, tokens: r.inputTokens + r.outputTokens };
+      return llmOrDigest(`${instruction}${notesBlock(ctx)}\n\n--- stdin ---\n${input}`, "smart", input, "transform");
     },
   },
   brief: {
     name: "brief", help: 'brief ["focus"]  — LLM writes an operator brief with citations from stdin',
     async run(input, args, ctx) {
       const [focus] = positional(tokenize(args));
-      const r = await llm(`Write a brief for a busy operator${focus ? ` focused on: ${focus}` : ""}.\nFormat: one headline line; then 3-6 bullets, each ending with its source URL from stdin in parentheses; then one line starting with "Action:" or "Risk:" if warranted. Under 180 words. Only use facts present in stdin.${notesBlock(ctx)}\n\n--- stdin ---\n${input}`, "smart", SYSTEM);
-      return { out: r.text.trim(), model: r.model, ms: r.ms, tokens: r.inputTokens + r.outputTokens };
+      return llmOrDigest(`Write a brief for a busy operator${focus ? ` focused on: ${focus}` : ""}.\nFormat: one headline line; then 3-6 bullets, each ending with its source URL from stdin in parentheses; then one line starting with "Action:" or "Risk:" if warranted. Under 180 words. Only use facts present in stdin.${notesBlock(ctx)}\n\n--- stdin ---\n${input}`, "smart", input, "brief");
     },
   },
   notify: {
