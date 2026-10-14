@@ -13,7 +13,8 @@ type PrivateData = { messages: PrivateMsg[]; proposals: Proposal[] };
 type Run = { id: number; pipeline_id: string; status: string; trigger: string; started_at: string; latency_ms: number | null; model_calls: number; output: string | null; error: string | null; steps: { cmd: string; model?: string; ms: number }[] };
 
 const ago = (iso: string) => { const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000)); return s < 60 ? `${s}s` : s < 3600 ? `${Math.round(s / 60)}m` : `${Math.round(s / 3600)}h`; };
-const colorFor = (a: string) => { let h = 0; for (const c of a) h = (h * 31 + c.charCodeAt(0)) % 360; return `hsl(${h} 65% 72%)`; };
+const PALETTE = ["#34d399", "#f472b6", "#fbbf24", "#60a5fa", "#fb923c", "#2dd4bf", "#c084fc", "#f87171"];
+const colorFor = (a: string) => { let h = 0; for (const c of a) h = (h * 31 + c.charCodeAt(0)) >>> 0; return PALETTE[h % PALETTE.length]; };
 const badge = (s: string) => s === "completed" ? "bg-emerald-500/15 text-emerald-300" : s === "in_progress" ? "bg-amber-500/15 text-amber-200" : "bg-zinc-700/40 text-zinc-300";
 async function api<T>(url: string, body?: unknown): Promise<T> {
   const r = await fetch(url, body ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : { cache: "no-store" });
@@ -214,12 +215,12 @@ export default function Home() {
       {taskId && data && (
         <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,3fr)_minmax(0,5fr)] divide-x divide-zinc-800">
           {/* collaborative space */}
-          <section className={`${pane} bg-[#202026]`}>
+          <section className={`${pane} bg-[#0f172a]`}>
             <div className={paneHead}>collaborative space <span className="text-zinc-600 normal-case tracking-normal">· everyone sees this</span></div>
             <div ref={streamRef} className="flex-1 min-h-0 overflow-auto p-3 space-y-2">
               {data.messages.map((m) => {
                 const agent = m.kind === "agent"; const working = m.kind === "working"; const sys = m.kind === "system" || m.kind === "context"; const cmd = m.kind === "command";
-                const cls = working ? "bg-indigo-500/5 border border-indigo-400/40 animate-pulse" : agent ? "bg-indigo-500/10 border border-indigo-500/20" : sys ? "bg-amber-400/10 border border-amber-400/20" : "bg-[#2b2b33] border-l-2";
+                const cls = working ? "bg-indigo-500/5 border border-indigo-400/40 animate-pulse" : agent ? "bg-indigo-500/10 border border-indigo-500/20" : sys ? "bg-amber-400/10 border border-amber-400/20" : "bg-[#1e293b] border-l-2";
                 return (
                   <div key={m.id} className={`rounded-lg px-3 py-2 ${cls}`} style={!agent && !working && !sys ? { borderLeftColor: colorFor(m.author) } : undefined}>
                     <div className="text-[11px] mb-0.5 flex gap-2"><span style={{ color: agent || working ? "#a5b4fc" : sys ? "#fcd34d" : colorFor(m.author) }}>{working ? "task agent · working" : m.author}</span><span className="text-zinc-600">{ago(m.created_at)} ago</span></div>
@@ -240,7 +241,7 @@ export default function Home() {
           {/* personal space */}
           <section className={`${pane} bg-black`}>
             <div className={paneHead}>your assistant <span className="text-zinc-600 normal-case tracking-normal">· only you see this</span></div>
-            {lastBrief && <div className="m-3 rounded-lg border border-indigo-500/30 bg-indigo-500/10 p-3"><div className="text-[11px] text-indigo-300 mb-1">latest brief · {ago(lastBrief.created_at)} ago</div><div className="text-[13px] text-zinc-100 leading-relaxed whitespace-pre-wrap">{lastBrief.body.split("\n\nProposal #")[0]}</div></div>}
+            {lastBrief && <div className="m-3 rounded-lg border border-teal-400/40 bg-teal-500/15 p-3"><div className="text-[11px] text-teal-300 mb-1">latest brief · {ago(lastBrief.created_at)} ago</div><div className="text-[13px] text-zinc-100 leading-relaxed whitespace-pre-wrap">{lastBrief.body.split("\n\nProposal #")[0]}</div></div>}
             {priv?.proposals.map((p) => (
               <div key={p.id} className="mx-3 mb-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
                 <div className="text-[11px] text-emerald-300 mb-1">needs your approval · #{p.id} · {p.action.replace("_", " ")}</div>
