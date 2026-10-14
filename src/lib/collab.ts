@@ -258,7 +258,7 @@ export async function summarize(scope: "all" | string) {
     const recent = await q<Message>("select author, kind, body from messages where task_id = $1 order by id desc limit 4", [t.id]);
     lines.push(`- ${t.room_name} › ${t.title} [${t.type}, ${t.status}]: ${recent.reverse().map((m) => `${m.author}: ${m.body.slice(0, 120).replace(/\n/g, " ")}`).join(" | ") || "no activity"}`);
   }
-  const r = await llm(`${scope === "all" ? "Summarize what is going on across all rooms" : "Summarize what is going on in this room"} for someone who just walked in. Max 110 words. Format: one bold-free headline line, then 3-5 short bullets each naming the task and what happened or needs a decision. Plain text.\n\nACTIVITY:\n${lines.join("\n") || "nothing yet"}`, "smart").catch(() => ({ text: "No activity yet." } as { text: string }));
+  const r = await llm(`${scope === "all" ? "Summarize what is going on across all rooms" : "Summarize what is going on in this room"} for someone who just walked in. Max 110 words. Use ONLY the facts in ACTIVITY below; never invent versions, decisions or people. A task with no activity gets at most "waiting for a first instruction". Format: one bold-free headline line, then 3-5 short bullets each naming the task and what happened or needs a decision. Plain text.\n\nACTIVITY:\n${lines.join("\n") || "nothing yet"}`, "smart").catch(() => ({ text: "No activity yet." } as { text: string }));
   const text = r.text.trim();
   await kvSet(key, text);
   return { summary: text, cached: false };
