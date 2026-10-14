@@ -34,11 +34,11 @@ function Clamp({ text, mono }: { text: string; mono?: boolean }) {
 }
 function Doc({ md }: { md: string }) {
   return (
-    <div className="space-y-2 text-zinc-200 leading-relaxed">
+    <div className="space-y-2 text-zinc-800 leading-relaxed">
       {md.split("\n").map((line, i) => {
-        if (/^#\s/.test(line)) return <h1 key={i} className="text-xl font-semibold text-zinc-50 mt-2">{line.replace(/^#\s/, "")}</h1>;
-        if (/^##\s/.test(line)) return <h2 key={i} className="text-lg font-semibold text-zinc-100 mt-3">{line.replace(/^##\s/, "")}</h2>;
-        if (/^###\s/.test(line)) return <h3 key={i} className="font-semibold text-zinc-100 mt-2">{line.replace(/^###\s/, "")}</h3>;
+        if (/^#\s/.test(line)) return <h1 key={i} className="text-xl font-semibold text-zinc-900 mt-2">{line.replace(/^#\s/, "")}</h1>;
+        if (/^##\s/.test(line)) return <h2 key={i} className="text-lg font-semibold text-zinc-900 mt-3">{line.replace(/^##\s/, "")}</h2>;
+        if (/^###\s/.test(line)) return <h3 key={i} className="font-semibold text-zinc-900 mt-2">{line.replace(/^###\s/, "")}</h3>;
         if (/^\s*[-*]\s/.test(line)) return <div key={i} className="pl-4">• {line.replace(/^\s*[-*]\s/, "").replace(/\*\*/g, "")}</div>;
         if (!line.trim()) return <div key={i} className="h-1" />;
         return <p key={i}>{line.replace(/\*\*/g, "")}</p>;
@@ -64,18 +64,18 @@ function Viewer({ data, runs }: { data: TaskData; runs: Run[] }) {
   if (t === "doc") return <div className="p-6 max-w-3xl"><Doc md={a.content} /></div>;
   if (t === "shell") return (
     <div className="p-4 space-y-3">
-      <pre className="whitespace-pre-wrap break-words text-amber-200/90 bg-black/40 rounded p-3 font-mono text-[12px]">{a.content.split("|").map((s, i) => (i ? "  | " : "") + s.trim()).join("\n")}</pre>
+      <pre className="whitespace-pre-wrap break-words text-amber-200 bg-zinc-900 rounded p-3 font-mono text-[12px]">{a.content.split("|").map((s, i) => (i ? "  | " : "") + s.trim()).join("\n")}</pre>
       <div className="text-xs text-zinc-500">runs (scheduled every 10 min once run)</div>
       {runs.length === 0 && <div className="text-zinc-500 text-sm">no runs yet: type /run in the collaborative space</div>}
       {runs.map((r) => (
-        <div key={r.id} className="rounded border border-zinc-800 p-3 font-mono text-[12px]">
-          <div className="text-zinc-400">#{r.id} · <span className={r.status === "ok" ? "text-emerald-400" : r.status === "failed" ? "text-red-400" : "text-zinc-400"}>{r.status}</span> · {r.trigger} · {ago(r.started_at)} ago · {r.latency_ms ?? "…"}ms · {r.steps.map((s) => s.cmd + (s.model ? ` (${s.model})` : "")).join(" | ")}</div>
-          {r.output && <pre className="mt-2 whitespace-pre-wrap break-words text-zinc-200 max-h-56 overflow-auto">{r.output}</pre>}
+        <div key={r.id} className="rounded border border-zinc-300 p-3 font-mono text-[12px]">
+          <div className="text-zinc-600">#{r.id} · <span className={r.status === "ok" ? "text-emerald-400" : r.status === "failed" ? "text-red-400" : "text-zinc-400"}>{r.status}</span> · {r.trigger} · {ago(r.started_at)} ago · {r.latency_ms ?? "…"}ms · {r.steps.map((s) => s.cmd + (s.model ? ` (${s.model})` : "")).join(" | ")}</div>
+          {r.output && <pre className="mt-2 whitespace-pre-wrap break-words text-zinc-800 max-h-56 overflow-auto">{r.output}</pre>}
         </div>
       ))}
     </div>
   );
-  return <pre className="p-5 whitespace-pre-wrap break-words font-mono text-[12.5px] text-zinc-100 leading-relaxed">{a.content}</pre>;
+  return <pre className="p-5 whitespace-pre-wrap break-words font-mono text-[12.5px] text-zinc-900 leading-relaxed">{a.content}</pre>;
 }
 
 export default function Home() {
@@ -170,8 +170,9 @@ export default function Home() {
 
   const room = rooms.find((r) => r.id === roomId);
   const lastBrief = priv ? [...priv.messages].reverse().find((m) => m.author === "assistant") : null;
-  const pane = "min-h-0 flex flex-col bg-[#141417]";
+  const pane = "min-h-0 flex flex-col";
   const paneHead = "px-4 py-2 border-b border-zinc-800 text-xs uppercase tracking-wider text-zinc-500 flex items-center gap-2";
+  const paneHeadLight = "px-4 py-2 border-b border-zinc-200 text-xs uppercase tracking-wider text-zinc-500 flex items-center gap-2";
   return (
     <main className="h-screen flex flex-col bg-[#141417] text-zinc-200">{header}
       <div className="bg-[#1b1b20] border-b border-zinc-800 px-5 py-2 flex flex-wrap items-center gap-2 text-sm">
@@ -183,7 +184,7 @@ export default function Home() {
 
       {!taskId && (
         <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] divide-x divide-zinc-800">
-          <section className={`${pane} overflow-auto`}>
+          <section className={`${pane} overflow-auto bg-[#141417]`}>
             <div className={paneHead}>{roomId ? "tasks in this room" : "rooms"}</div>
             <div className="p-4 space-y-2">
               {!roomId && rooms.map((r) => (
@@ -203,7 +204,7 @@ export default function Home() {
               {roomId && <form onSubmit={mkTask} className="flex gap-2 pt-2"><input value={newTask} onChange={(e) => setNewTask(e.target.value)} placeholder="new task title" className="flex-1 rounded bg-black/40 border border-zinc-700 px-3 py-2 outline-none focus:border-zinc-400" /><select value={newType} onChange={(e) => setNewType(e.target.value as TaskType)} className="rounded bg-black/40 border border-zinc-700 px-2 py-2">{["doc", "code", "image", "shell"].map((t) => <option key={t} value={t}>{t}</option>)}</select><button className="rounded bg-zinc-100 text-zinc-900 px-3 py-2">Create</button></form>}
             </div>
           </section>
-          <section className={`${pane} overflow-auto`}>
+          <section className={`${pane} overflow-auto bg-[#141417]`}>
             <div className={paneHead}>{roomId ? `what's going on in ${room?.name ?? "this room"}` : "what's going on across rooms"}</div>
             <Summary title={roomId ? "room summary" : "overview"} text={summary} loading={sumLoading} />
           </section>
@@ -213,12 +214,12 @@ export default function Home() {
       {taskId && data && (
         <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,3fr)_minmax(0,5fr)] divide-x divide-zinc-800">
           {/* collaborative space */}
-          <section className={pane}>
+          <section className={`${pane} bg-[#202026]`}>
             <div className={paneHead}>collaborative space <span className="text-zinc-600 normal-case tracking-normal">· everyone sees this</span></div>
             <div ref={streamRef} className="flex-1 min-h-0 overflow-auto p-3 space-y-2">
               {data.messages.map((m) => {
                 const agent = m.kind === "agent"; const working = m.kind === "working"; const sys = m.kind === "system" || m.kind === "context"; const cmd = m.kind === "command";
-                const cls = working ? "bg-indigo-500/5 border border-indigo-400/40 animate-pulse" : agent ? "bg-indigo-500/10 border border-indigo-500/20" : sys ? "bg-amber-400/10 border border-amber-400/20" : "bg-[#1b1b20] border-l-2";
+                const cls = working ? "bg-indigo-500/5 border border-indigo-400/40 animate-pulse" : agent ? "bg-indigo-500/10 border border-indigo-500/20" : sys ? "bg-amber-400/10 border border-amber-400/20" : "bg-[#2b2b33] border-l-2";
                 return (
                   <div key={m.id} className={`rounded-lg px-3 py-2 ${cls}`} style={!agent && !working && !sys ? { borderLeftColor: colorFor(m.author) } : undefined}>
                     <div className="text-[11px] mb-0.5 flex gap-2"><span style={{ color: agent || working ? "#a5b4fc" : sys ? "#fcd34d" : colorFor(m.author) }}>{working ? "task agent · working" : m.author}</span><span className="text-zinc-600">{ago(m.created_at)} ago</span></div>
@@ -237,7 +238,7 @@ export default function Home() {
             </div>
           </section>
           {/* personal space */}
-          <section className={`${pane} bg-[#17171c]`}>
+          <section className={`${pane} bg-black`}>
             <div className={paneHead}>your assistant <span className="text-zinc-600 normal-case tracking-normal">· only you see this</span></div>
             {lastBrief && <div className="m-3 rounded-lg border border-indigo-500/30 bg-indigo-500/10 p-3"><div className="text-[11px] text-indigo-300 mb-1">latest brief · {ago(lastBrief.created_at)} ago</div><div className="text-[13px] text-zinc-100 leading-relaxed whitespace-pre-wrap">{lastBrief.body.split("\n\nProposal #")[0]}</div></div>}
             {priv?.proposals.map((p) => (
@@ -251,7 +252,7 @@ export default function Home() {
             <div ref={privRef} className="flex-1 min-h-0 overflow-auto px-3 pb-2 space-y-2">
               {priv?.messages.length === 0 && <div className="text-zinc-500 text-sm p-1">Your assistant reads the room for you, briefs you here, and can steer the task on your behalf once you approve. Ask it anything.</div>}
               {priv?.messages.map((m) => (
-                <div key={m.id} className={`rounded-lg px-3 py-2 ${m.author === "assistant" ? "bg-indigo-500/10 border border-indigo-500/20" : "bg-[#1b1b20] border-l-2"}`} style={m.author === "assistant" ? undefined : { borderLeftColor: colorFor(user) }}>
+                <div key={m.id} className={`rounded-lg px-3 py-2 ${m.author === "assistant" ? "bg-indigo-500/10 border border-indigo-500/20" : "bg-[#17171c] border-l-2"}`} style={m.author === "assistant" ? undefined : { borderLeftColor: colorFor(user) }}>
                   <div className="text-[11px] mb-0.5"><span style={{ color: m.author === "assistant" ? "#a5b4fc" : colorFor(user) }}>{m.author === "assistant" ? "assistant" : "you"}</span><span className="text-zinc-600"> · {ago(m.created_at)} ago</span></div>
                   <Clamp text={m.body} />
                 </div>
@@ -263,8 +264,8 @@ export default function Home() {
             </form>
           </section>
           {/* agent workspace */}
-          <section className={pane}>
-            <div className={paneHead}>agent workspace {data.artifact && <span className="text-zinc-600 normal-case tracking-normal">· {data.task.type} · v{data.artifact.version} · {data.artifact.created_by} · {ago(data.artifact.created_at)} ago</span>}</div>
+          <section className={`${pane} bg-white text-zinc-900`}>
+            <div className={paneHeadLight}>agent workspace {data.artifact && <span className="text-zinc-600 normal-case tracking-normal">· {data.task.type} · v{data.artifact.version} · {data.artifact.created_by} · {ago(data.artifact.created_at)} ago</span>}</div>
             <div className="flex-1 min-h-0 overflow-auto"><Viewer data={data} runs={runs} /></div>
           </section>
         </div>
