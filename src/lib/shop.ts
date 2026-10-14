@@ -60,9 +60,22 @@ export async function shopSearch(query: string, maxUsd?: number, limit = 8): Pro
       title: String(p.title ?? ""),
       price,
       rating: rating.value ? `${rating.value}★ (${rating.count ?? 0})` : "unrated",
-      availability: String((v0 as { availability?: string }).availability ?? ""),
+      availability: fmtAvailability((v0 as { availability?: unknown }).availability),
       url,
       merchant,
     };
   });
+}
+
+function fmtAvailability(a: unknown): string {
+  if (!a) return "";
+  if (typeof a === "string") return a;
+  if (typeof a === "object") {
+    const o = a as Record<string, unknown>;
+    const s = o.status ?? o.state ?? o.type ?? o.label;
+    if (typeof s === "string") return s.replace(/_/g, " ");
+    const str = Object.values(o).find((x) => typeof x === "string");
+    return typeof str === "string" ? str.replace(/_/g, " ") : "";
+  }
+  return String(a);
 }
