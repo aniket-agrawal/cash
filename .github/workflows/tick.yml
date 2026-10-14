@@ -1,0 +1,13 @@
+name: agentsh ticker
+# Portable cron: pokes the deployed scheduler every 5 minutes so agents keep working on any Vercel plan.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: tick
+        run: |
+          curl -sS --max-time 290 -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.APP_URL }}/api/tick" | head -c 4000

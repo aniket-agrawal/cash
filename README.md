@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# agentsh — a unix shell for agents that keep working
 
-## Getting Started
+> Unix solved sprawl in 1973: small programs that do one thing, speak plain text, compose with pipes, run from cron, and can be watched and killed by an operator. agentsh applies that to AI agents.
 
-First, run the development server:
+Every agent is a tiny command. You compose them with `|`, schedule them, and operate them like processes:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+gh-releases vercel/next.js -n 5 | diff | brief "breaking changes and migration risk"
+hn "ai agents" -n 15 | diff | filter "about running agents in production" | brief | notify "research brief"
+shop "low profile mechanical keyboard" --max 150 | diff | brief "price drops and best value" | notify "shop watch"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **keeps working**: pipelines run from cron (Vercel Cron + a portable GitHub Actions ticker) with no prompt per step
+- **monitor**: `tail -f` of every run, every step's model, latency and tokens, and the delivered inbox
+- **steer**: `steer <id> <note>` injects operator notes into the next run; `kill`/`start` pause and resume; `pipe` creates a new agent live
+- **cheap by construction**: `diff` stops the pipeline when nothing changed, so no tokens are spent; cheap models filter, smart models write, all via AI Gateway with automatic fallbacks
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Commands
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`fetch` · `gh-releases` · `hn` · `arxiv` · `shop` (Shop MCP, live) · `grep` · `head` · `diff` · `filter` · `llm` · `brief` · `notify`
 
-## Learn More
+## Stack
 
-To learn more about Next.js, take a look at the following resources:
+Next.js on Vercel · AI SDK + Vercel AI Gateway (meta/llama-4-maverick for filtering, anthropic/claude-haiku-5.5 for briefs, with fallbacks) · Neon Postgres (pipelines, runs, steer queue, inbox, diff state) · Vercel Cron + GitHub Actions ticker · Shop MCP
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Philosophy
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This is how [Xyne](https://github.com/juspay/xyne-spaces), Juspay's open-source org OS, thinks about agents: an organization is a filesystem of context that agents `ls`, `grep` and `tail` as the person who invoked them, permission-aware by default, with small sandboxed tools instead of one monolith. agentsh is that idea reduced to a shell you can run on Vercel in an afternoon.
 
-## Deploy on Vercel
+## Run it
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+npm i && cp .env.example .env.local   # set DATABASE_URL (Neon) and CRON_SECRET
+npm run dev
+curl -X POST -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/setup   # schema + seed pipelines
+curl -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/tick            # run whatever is due
+```
