@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.79",
+    "@ai-sdk/openai": "^4.0.93",
     "@ai-sdk/react": "^4.0.143",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@neondatabase/serverless": "^1.2.0",

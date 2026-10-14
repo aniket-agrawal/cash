@@ -1,4 +1,6 @@
-import { generateText } from "ai";
+import { generateText, type LanguageModel } from "ai";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createOpenAI } from "@ai-sdk/openai";
 
 // Model tiers routed through Vercel AI Gateway with automatic fallbacks.
 // Cheap tier handles filtering/classification; smart tier writes briefs.
@@ -17,23 +19,37 @@ export interface LlmResult {
   outputTokens: number;
 }
 
+// Escape hatch: if a direct provider key is configured, bypass the Gateway (LLM_PROVIDER=anthropic|openai|gateway).
+function directModel(tier: Tier): { model: LanguageModel; label: string } | null {
+  const pref = process.env.LLM_PROVIDER ?? (process.env.ANTHROPIC_API_KEY ? "anthropic" : process.env.OPENAI_API_KEY ? "openai" : "gateway");
+  if (pref === "anthropic" && process.env.ANTHROPIC_API_KEY) {
+    const id = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5";
+    return { model: createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })(id), label: `anthropic:${id} (direct)` };
+  }
+  if (pref === "openai" && process.env.OPENAI_API_KEY) {
+    const id = process.env.OPENAI_MODEL ?? (tier === "cheap" ? "gpt-5-nano" : "gpt-5-mini");
+    return { model: createOpenAI({ apiKey: process.env.OPENAI_API_KEY })(id), label: `openai:${id} (direct)` };
+  }
+  return null;
+}
+
 export async function llm(prompt: string, tier: Tier = "smart", system?: string): Promise<LlmResult> {
   const t = TIERS[tier];
   const started = Date.now();
+  const direct = directModel(tier);
   const res = await generateText({
-    model: t.model,
+    model: direct ? direct.model : t.model,
     system,
     prompt,
-    providerOptions: { gateway: { models: [...t.fallbacks] } },
+    ...(direct ? {} : { providerOptions: { gateway: { models: [...t.fallbacks] } } }),
   });
   const ms = Date.now() - started;
   const meta = (res.providerMetadata ?? {}) as Record<string, unknown>;
   const gw = (meta.gateway ?? {}) as Record<string, unknown>;
   const routing = (gw.routing ?? {}) as Record<string, unknown>;
-  const served =
-    (typeof routing.finalModel === "string" && routing.finalModel) ||
-    res.response?.modelId ||
-    t.model;
+  const served = direct
+    ? direct.label
+    : (typeof routing.finalModel === "string" && routing.finalModel) || res.response?.modelId || t.model;
   return {
     text: res.text,
     model: String(served),
