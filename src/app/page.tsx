@@ -175,7 +175,6 @@ export default function Home() {
   return (
     <main className="h-screen flex flex-col bg-[#141417] text-zinc-200">{header}
       <div className="bg-[#1b1b20] border-b border-zinc-800 px-5 py-2 flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-zinc-500">you are in</span>
         <button className={`px-2 py-0.5 rounded ${!roomId ? "bg-zinc-100 text-zinc-900" : "text-zinc-300 hover:text-zinc-50"}`} onClick={() => { setRoomId(null); setTaskId(null); setData(null); }}>rooms</button>
         {roomId && <><span className="text-zinc-600">›</span><button className={`px-2 py-0.5 rounded ${!taskId ? "bg-zinc-100 text-zinc-900" : "text-zinc-300 hover:text-zinc-50"}`} onClick={() => { setTaskId(null); setData(null); }}>{room?.name ?? roomId}</button></>}
         {taskId && data && <><span className="text-zinc-600">›</span><span className="px-2 py-0.5 rounded bg-zinc-100 text-zinc-900">{data.task.title}</span><span className={`px-1.5 py-0.5 rounded text-xs ${badge(data.task.status)}`}>{data.task.status.replace("_", " ")}</span><span className="text-xs text-zinc-500">{data.task.type}</span>{data.working && <span className="text-xs text-indigo-300 animate-pulse">task agent working…</span>}</>}
