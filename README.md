@@ -37,3 +37,5 @@ npm run dev
 curl -X POST -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/setup   # schema + seed pipelines
 curl -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/tick            # run whatever is due
 ```
+
+Live: https://xyne-cash.vercel.app
