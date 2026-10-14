@@ -72,6 +72,7 @@ function fmtAvailability(a: unknown): string {
   if (typeof a === "string") return a;
   if (typeof a === "object") {
     const o = a as Record<string, unknown>;
+    if (typeof o.available === "boolean") return o.available ? "in stock" : "out of stock";
     const s = o.status ?? o.state ?? o.type ?? o.label;
     if (typeof s === "string") return s.replace(/_/g, " ");
     const str = Object.values(o).find((x) => typeof x === "string");
