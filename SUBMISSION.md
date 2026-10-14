@@ -1,10 +1,10 @@
-# Fast Forward Hack submission — Xyne presents CASH (Collaborative Agent Shell)
+# Fast Forward Hack submission — Xyne presents CASH (Collaborative Agents Shell)
 
 **Track:** Agents & Factories
 **Side quest:** Build with Shopify (the `shop` command uses Shop MCP live, product URLs kept verbatim, nothing cached)
 
 ## Project name
-CASH — Collaborative Agent Shell, by Xyne
+CASH — Collaborative Agents Shell, by Xyne
 
 ## Short description (paste into the form)
 CASH is a shell that a team and its agents share. Sign in with a username, enter a room, open a task. On the left, the conversation: people and agents steer in the same stream, with commands like /agent, /approve, /pull and /status. On the right, the agent at work: a code file, a document, an image or a scheduled pipeline, with a viewer that adapts to the task type. Everyone sees the same state live from Neon Postgres. Each person gets a background assistant that reads what others did, explains it, and proposes the next action; reading needs no permission, acting does, so you approve with one click. Context is unified: /pull brings another task's artifact and discussion into the one you are in. Shell tasks are Unix-style agent pipelines (small commands joined by pipes) that keep running on a schedule after you walk away. This is how Xyne, Juspay's open-source org OS, thinks about agents: shared context, permission-aware, people and agents in one place.

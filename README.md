@@ -1,4 +1,4 @@
-# CASH — Collaborative Agent Shell
+# CASH — Collaborative Agents Shell
 
 **Xyne presents CASH:** unix pipes for agents that keep working, operated together by your team.
 
